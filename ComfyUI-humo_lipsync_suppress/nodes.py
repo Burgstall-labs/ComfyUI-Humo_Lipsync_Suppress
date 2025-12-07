@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 class HuMoLipsyncSuppress:
     """
@@ -114,10 +115,123 @@ class HuMoLipsyncSuppress:
         return (embeds,)
 
 
+class HuMoAudioThresholdSwitcher:
+    """
+    Audio threshold switcher that analyzes audio input and outputs a boolean signal
+    based on RMS volume threshold. When audio is silent (below threshold), outputs
+    True to enable the lipsync suppressor. When audio is present (above threshold),
+    outputs False to disable the suppressor.
+    
+    Useful for automatically enabling suppression when processing vocal stems that
+    may contain silent segments or residual background noise.
+    """
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "audio": ("*", {
+                    "tooltip": "Audio input (numpy array, torch tensor, or list/tuple containing audio data)"
+                }),
+                "threshold": ("FLOAT", {
+                    "default": 0.01,
+                    "min": 0.0,
+                    "max": 1.0,
+                    "step": 0.001,
+                    "tooltip": "RMS volume threshold. Audio below this value is considered silent."
+                }),
+                "invert": ("BOOLEAN", {
+                    "default": False,
+                    "tooltip": "Invert the logic: True = enable suppressor when audio is LOUD (above threshold)"
+                }),
+            }
+        }
+
+    RETURN_TYPES = ("BOOLEAN",)
+    RETURN_NAMES = ("enabled",)
+    FUNCTION = "analyze"
+    CATEGORY = "HuMo Audio/Motion"
+    DESCRIPTION = "Analyze audio RMS and output boolean to control lipsync suppressor based on volume threshold."
+
+    def _convert_to_tensor(self, audio):
+        """Convert various audio formats to a torch tensor."""
+        if isinstance(audio, torch.Tensor):
+            return audio.float()
+        elif isinstance(audio, np.ndarray):
+            return torch.from_numpy(audio).float()
+        elif isinstance(audio, (list, tuple)):
+            # Handle tuple/list formats like (sample_rate, audio_data)
+            if len(audio) == 2 and isinstance(audio[1], (np.ndarray, torch.Tensor, list)):
+                # Assume format is (sample_rate, audio_data)
+                audio_data = audio[1]
+                if isinstance(audio_data, torch.Tensor):
+                    return audio_data.float()
+                elif isinstance(audio_data, np.ndarray):
+                    return torch.from_numpy(audio_data).float()
+                else:
+                    return torch.tensor(audio_data, dtype=torch.float32)
+            else:
+                # Assume it's a flat list of audio samples
+                return torch.tensor(audio, dtype=torch.float32)
+        else:
+            # Try to convert to tensor directly
+            try:
+                return torch.tensor(audio, dtype=torch.float32)
+            except:
+                raise ValueError(f"Unsupported audio format: {type(audio)}")
+
+    def _calculate_rms(self, audio_tensor):
+        """Calculate RMS (Root Mean Square) amplitude of audio."""
+        # Flatten the tensor to get all samples
+        audio_flat = audio_tensor.flatten()
+        
+        # Calculate RMS: sqrt(mean(samples^2))
+        rms = torch.sqrt(torch.mean(audio_flat ** 2))
+        
+        # Handle edge case of empty or all-zero audio
+        if torch.isnan(rms) or torch.isinf(rms):
+            return 0.0
+        
+        return rms.item()
+
+    def analyze(self, audio, threshold, invert):
+        """
+        Analyze audio RMS and determine if suppressor should be enabled.
+        
+        Args:
+            audio: Audio input in various formats (numpy array, torch tensor, etc.)
+            threshold: RMS threshold value (0.0 to 1.0)
+            invert: If True, invert the logic
+        
+        Returns:
+            enabled (bool): True to enable suppressor, False to disable
+        """
+        # Convert audio to tensor
+        audio_tensor = self._convert_to_tensor(audio)
+        
+        # Calculate RMS
+        rms = self._calculate_rms(audio_tensor)
+        
+        # Determine if audio is silent (below threshold)
+        is_silent = rms < threshold
+        
+        # Default logic: enable suppressor when silent
+        if invert:
+            # Inverted: enable suppressor when audio is LOUD (above threshold)
+            enabled = not is_silent
+        else:
+            # Normal: enable suppressor when audio is SILENT (below threshold)
+            enabled = is_silent
+        
+        return (enabled,)
+
+
 NODE_CLASS_MAPPINGS = {
     "HuMoLipsyncSuppress": HuMoLipsyncSuppress,
+    "HuMoAudioThresholdSwitcher": HuMoAudioThresholdSwitcher,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "HuMoLipsyncSuppress": "HuMo Lipsync Suppress",
+    "HuMoAudioThresholdSwitcher": "HuMo Audio Threshold Switcher",
 }
