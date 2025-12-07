@@ -35,7 +35,7 @@ class HuMoLipsyncSuppress:
     RETURN_TYPES = ("WANVIDIMAGE_EMBEDS",)
     RETURN_NAMES = ("image_embeds",)
     FUNCTION = "apply"
-    CATEGORY = "HuMo Audio/Motion"
+    CATEGORY = "HuMo Lipsync Suppress"
     DESCRIPTION = "Apply preset band gains to suppress lip-sync motion (boolean trigger)."
 
     # Preset values from reference image
@@ -150,7 +150,7 @@ class HuMoAudioThresholdSwitcher:
     RETURN_TYPES = ("BOOLEAN",)
     RETURN_NAMES = ("enabled",)
     FUNCTION = "analyze"
-    CATEGORY = "HuMo Audio/Motion"
+    CATEGORY = "HuMo Lipsync Suppress"
     DESCRIPTION = "Analyze audio RMS and output boolean to control lipsync suppressor based on volume threshold."
 
     def _convert_to_tensor(self, audio):
