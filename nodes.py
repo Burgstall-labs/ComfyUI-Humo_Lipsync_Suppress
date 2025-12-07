@@ -130,8 +130,8 @@ class HuMoAudioThresholdSwitcher:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "audio": ("*", {
-                    "tooltip": "Audio input (numpy array, torch tensor, or list/tuple containing audio data)"
+                "audio": ("AUDIO", {
+                    "tooltip": "Audio input (standard ComfyUI AUDIO type)"
                 }),
                 "threshold": ("FLOAT", {
                     "default": 0.01,
@@ -155,6 +155,10 @@ class HuMoAudioThresholdSwitcher:
 
     def _convert_to_tensor(self, audio):
         """Convert various audio formats to a torch tensor."""
+        # Handle ComfyUI AUDIO dict format {'waveform': tensor, 'sample_rate': int}
+        if isinstance(audio, dict) and 'waveform' in audio:
+            return audio['waveform'].float()
+            
         if isinstance(audio, torch.Tensor):
             return audio.float()
         elif isinstance(audio, np.ndarray):
