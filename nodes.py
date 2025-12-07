@@ -235,3 +235,4 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "HuMoLipsyncSuppress": "HuMo Lipsync Suppress",
     "HuMoAudioThresholdSwitcher": "HuMo Audio Threshold Switcher",
 }
+
