@@ -1,12 +1,14 @@
 # HuMo Lipsync Suppress
 
-A ComfyUI custom node for suppressing lip-sync motion in HuMo audio embeddings with a simple boolean toggle.
+A ComfyUI custom node for suppressing lip-sync motion in HuMo audio embeddings with a simple boolean toggle, plus an automatic threshold switcher for intelligent suppression control.
 
 ## 🎯 Overview
 
-This node provides a one-click solution to reduce or eliminate lip/mouth movement in HuMo-generated character animations. Perfect for creating characters that react to audio without excessive lip-sync motion.
+This package provides two nodes for controlling lip-sync suppression in HuMo-generated character animations:
 
-When enabled, it applies optimized preset band gains to the HuMo audio embeddings. When disabled, embeddings pass through unchanged.
+1. **HuMo Lipsync Suppress**: A one-click solution to reduce or eliminate lip/mouth movement. When enabled, it applies optimized preset band gains to the HuMo audio embeddings. When disabled, embeddings pass through unchanged.
+
+2. **HuMo Audio Threshold Switcher**: Automatically enables suppression based on audio volume. Perfect for processing vocal stems that may contain silent segments or residual background noise - the suppressor activates automatically when audio is below a configurable RMS threshold.
 
 ## ✨ Features
 
@@ -15,6 +17,7 @@ When enabled, it applies optimized preset band gains to the HuMo audio embedding
 - **🎛️ Multi-Band Processing** - Targets 5 frequency bands from Whisper-derived features
 - **🌊 Temporal Smoothing** - EMA filtering reduces flickering artifacts
 - **🔌 Drop-in Replacement** - Compatible with existing HuMo workflows
+- **🎚️ Automatic Threshold Switcher** - New node that automatically enables suppression based on audio RMS threshold
 
 ## 📦 Installation
 
@@ -63,6 +66,32 @@ When enabled, it applies optimized preset band gains to the HuMo audio embedding
    - **✓ Enabled (True)**: Applies lip-sync suppression
    - **☐ Disabled (False)**: Passes embeddings unchanged
 
+### Using the Audio Threshold Switcher
+
+The **HuMo Audio Threshold Switcher** node automatically controls the suppressor based on audio volume:
+
+1. Locate the node under:
+   ```
+   Add Node → HuMo Audio/Motion → HuMo Audio Threshold Switcher
+   ```
+
+2. Connect your workflow:
+   ```
+   [Vocal Stem Audio] → [HuMo Audio Threshold Switcher] → [HuMo Lipsync Suppress]
+                              ↓                                    ↓
+                         threshold: 0.01                      enabled: (auto)
+                         invert: False
+   ```
+
+3. Configure the parameters:
+   - **threshold**: RMS volume threshold (default: 0.01). Audio below this value is considered silent.
+   - **invert**: If enabled, flips the logic to enable suppressor when audio is LOUD instead of silent.
+
+4. How it works:
+   - When audio RMS < threshold (silent): Outputs `True` → Enables suppressor
+   - When audio RMS >= threshold (audio present): Outputs `False` → Disables suppressor
+   - Perfect for vocal stems that may contain silent segments or residual background noise
+
 ## ⚙️ Technical Details
 
 ### Input/Output
@@ -104,6 +133,8 @@ The node applies these fixed values when enabled:
 - **Stylized Animation**: Create non-realistic character reactions
 - **Audio-Reactive Motion**: Keep body movement while suppressing lips
 - **Artistic Control**: Selective lip-sync suppression in workflows
+- **Automatic Suppression**: Use the threshold switcher to automatically enable suppression during silent segments in vocal stems
+- **Vocal Stem Processing**: Handle stems separated with tools like MelBandFormer that may contain glitches or background vocal remnants
 
 ## 🔧 Requirements
 
@@ -113,11 +144,21 @@ The node applies these fixed values when enabled:
 
 ## 📝 How It Works
 
+### HuMo Lipsync Suppress Node
+
 1. **Band Separation**: HuMo audio embeddings contain 5 frequency bands derived from Whisper features
 2. **Gain Application**: Bands 3-4 (containing primary lip-sync cues) are heavily suppressed (0.01x)
 3. **Transient Boost**: Bands 0-1 are amplified (4.00x) to maintain motion energy
 4. **Temporal Smoothing**: EMA filter (β=0.90) reduces frame-to-frame flickering
 5. **Full Blend**: Edited signal completely replaces original (α=1.00)
+
+### HuMo Audio Threshold Switcher Node
+
+1. **Audio Input**: Accepts audio in various formats (torch tensors, numpy arrays, tuples/lists)
+2. **RMS Calculation**: Computes Root Mean Square amplitude of the entire audio clip
+3. **Threshold Comparison**: Compares RMS value against the configured threshold
+4. **Boolean Output**: Returns `True` (enable suppressor) when audio is silent (RMS < threshold), `False` otherwise
+5. **Format Flexibility**: Automatically handles different audio input formats commonly used in ComfyUI workflows
 
 ## 🤝 Contributing
 
