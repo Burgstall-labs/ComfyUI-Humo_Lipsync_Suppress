@@ -29,6 +29,10 @@ class HuMoLipsyncSuppress:
                     "default": True,
                     "tooltip": "Enable lipsync suppression (apply preset gains)"
                 }),
+                "enable_rhythm_boost": ("BOOLEAN", {
+                    "default": True,
+                    "tooltip": "Boost bands 0-1 (rhythm/transients) by 4x to maintain head motion. Disable if lips still move despite suppression."
+                }),
             }
         }
 
@@ -50,7 +54,7 @@ class HuMoLipsyncSuppress:
         """Per-frame, per-band RMS (keep channel dim)"""
         return x.pow(2).mean(dim=-1, keepdim=True).sqrt().clamp_min(eps)
 
-    def apply(self, image_embeds, enabled):
+    def apply(self, image_embeds, enabled, enable_rhythm_boost):
         # If disabled, return unchanged
         if not enabled:
             return (image_embeds,)
@@ -70,8 +74,15 @@ class HuMoLipsyncSuppress:
         dtype = x.dtype
         x_orig = x
 
+        # Prepare gains based on boost switch
+        current_gains = list(self.PRESET_GAINS)
+        if not enable_rhythm_boost:
+            # Disable boost: Set bands 0 & 1 to 1.0 (neutral) instead of 4.0
+            current_gains[0] = 1.0
+            current_gains[1] = 1.0
+
         # Apply preset per-band gains
-        gains = torch.tensor(self.PRESET_GAINS, device=device, dtype=dtype).view(1, 5, 1)
+        gains = torch.tensor(current_gains, device=device, dtype=dtype).view(1, 5, 1)
 
         # Temporal EMA smoothing
         if x.shape[0] > 1 and self.PRESET_EMA_BETA > 0.0:

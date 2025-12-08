@@ -66,6 +66,10 @@ This package provides two nodes for controlling lip-sync suppression in HuMo-gen
    - **✓ Enabled (True)**: Applies lip-sync suppression
    - **☐ Disabled (False)**: Passes embeddings unchanged
 
+4. Optional: Toggle `enable_rhythm_boost`:
+   - **✓ Enabled (True)**: Default. Boosts rhythm bands (0 & 1) by 4x to maintain head motion.
+   - **☐ Disabled (False)**: Sets rhythm bands to 1x (neutral). Use this if lips are still moving despite suppression.
+
 ### Using the Audio Threshold Switcher
 
 The **HuMo Audio Threshold Switcher** node automatically controls the suppressor based on audio volume:
@@ -148,7 +152,7 @@ The node applies these fixed values when enabled:
 
 1. **Band Separation**: HuMo audio embeddings contain 5 frequency bands derived from Whisper features
 2. **Gain Application**: Bands 3-4 (containing primary lip-sync cues) are heavily suppressed (0.01x)
-3. **Transient Boost**: Bands 0-1 are amplified (4.00x) to maintain motion energy
+3. **Transient Boost**: Bands 0-1 are amplified (4.00x) to maintain motion energy (can be disabled via `enable_rhythm_boost`)
 4. **Temporal Smoothing**: EMA filter (β=0.90) reduces frame-to-frame flickering
 5. **Full Blend**: Edited signal completely replaces original (α=1.00)
 
